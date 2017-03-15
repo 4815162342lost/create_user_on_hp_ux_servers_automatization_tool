@@ -1,0 +1,4 @@
+group='group1'
+comment='user'
+shell='/usr/local/bin/bash'
+skel='/root/hp_skel/skel.tar'
