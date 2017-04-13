@@ -76,6 +76,25 @@ def create_group():
         except:
             print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
 
+def edit_profile():
+    hp_users = get_login_and_password()
+    for counter_1, current_user in enumerate(hp_users.keys()):
+        print("editing .profile of the user "+current_user)
+        hp_server_list.seek(0)
+        for counter_2, curren_hp_server in enumerate(hp_server_list):
+            try:
+                command = "ssh {server} 'echo {content}>>/home/{user}/.profile'".format(
+                    server=curren_hp_server.rstrip(),
+                    user=current_user,
+                    content="aaaaaaaaaa")
+                if counter_1==0 and counter_2==0:
+                    answer = input("Is construction correct?(y,n)\n" + command + "\n")
+                    question(answer)
+                proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+                proc.wait(timeout=300)
+            except:
+                exit()
+                print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
 
 def run_custom_command():
     """Function for run custom programm"""
@@ -95,13 +114,16 @@ def run_custom_command():
 
 def menu_choose():
     """Function for display meny vir variables"""
-    chose=input("Hello.\nPress 1 to create accounts \nPress 2 to create group \nPress 3 to run custom command\n")
+    chose=input("Hello.\nPress 1 to create accounts \nPress 2 to create group \nPress 3 to edit '.profile'\nPress 4 to run custom command\n")
     if chose=='1':
         create_accounts()
     elif chose=='2':
         create_group()
     elif chose=='3':
+        edit_profile()
+    elif chose=='4':
         run_custom_command()
+
     else:
         print("Are you OK? Ehat are you doing? Try again.")
 
