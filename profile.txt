@@ -1,0 +1,4 @@
+PS1="${USER}@${HOSTNAME} \${PWD##*/}/\$ "
+HISTSIZE=10000
+HISTFILE=~/.sh_history
+export HISTFILE HISTSIZE PS1
