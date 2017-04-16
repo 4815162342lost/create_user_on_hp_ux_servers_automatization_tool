@@ -19,6 +19,12 @@ def get_settings():
     exec(open('settings.txt', 'r').read(), None, settings)
     return settings
 
+def get_names_of_tje_login():
+    '''Function for return login and password hash as dictionary'''
+    names={}
+    exec(open('names.txt', 'r').read(), None, names)
+    return names
+
 def question(answer):
     '''Function for processing answer (y\n) before continue'''
     if answer == 'y':
@@ -32,16 +38,17 @@ def question(answer):
 
 def create_accounts():
     """Function for create account"""
-    #check len ght of the login
+    #check len of the login (HP UX soes not support login longer 8 symbol)
     hp_users = get_login_and_password()
     for current_user in hp_users.keys():
         if len(current_user) > 8:
             print("The login " + current_user + " is too long. The maximum length is 8 symbols. Fix it!")
-            exit(0)
-
+            exit()
+    #loop for read usernames
     for counter_1, current_user in enumerate(hp_users.keys()):
         print("Create the account for the user "+current_user)
         hp_server_list.seek(0)
+        #loop for read server name
         for counter_2, curren_hp_server in enumerate(hp_server_list):
             try:
                 settings['comment']=settings['comment'].replace(' ', '_')
@@ -52,49 +59,69 @@ def create_accounts():
                     comment=settings['comment'],
                     pass_hash=hp_users[current_user],
                     user=current_user)
+                #check command in first iteration
                 if counter_1==0 and counter_2==0:
                     answer = input("Is construction correct?(y,n)\n" + command + "\n")
                     question(answer)
+                print("Server:", curren_hp_server.rstrip())
                 proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                 proc.wait(timeout=300)
             except:
                 exit()
-                print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
+                print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
 
 def create_group():
     """Function for create group"""
+    print("Creating group for  "+settings['group'])
     for counter, curren_hp_server in enumerate(hp_server_list):
         command = "ssh {server} 'groupadd {group_name}'".format(
         group_name=settings['group'],
         server=curren_hp_server.rstrip())
+        # check command in first iteration
         if counter==0:
             answer=input("Is construction correct?(y,n)\n"+ command + "\n")
             question(answer)
         try:
+            print("Server:", curren_hp_server.rstrip())
             proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
             proc.wait(timeout=300)
         except:
-            print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
+            print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
 
 def edit_profile():
     hp_users = get_login_and_password()
+    names=get_names_of_tje_login()
+    profile_file=open("profile.txt", 'r')
     for counter_1, current_user in enumerate(hp_users.keys()):
         print("editing .profile of the user "+current_user)
         hp_server_list.seek(0)
         for counter_2, curren_hp_server in enumerate(hp_server_list):
+            print("On the server " + curren_hp_server)
+            profile_file.seek(0)
+            for counter_3, current_line in enumerate(profile_file.readlines()):
+                try:
+                    command = "ssh {server} 'echo '{content}'>>/home/{user}/.profile'".format(
+                        server=curren_hp_server.rstrip(),
+                        user=current_user,
+                        content=current_line.rstrip())
+                    if counter_1==0 and counter_2==0 and counter_3==0:
+                        answer = input("Is construction correct?(y,n)\n" + command + "\n")
+                        question(answer)
+                    print(command)
+                    proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+                    proc.wait(timeout=300)
+                except:
+                    print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
             try:
-                command = "ssh {server} 'echo {content}>>/home/{user}/.profile'".format(
+                command = "ssh {server} 'echo 'Hello, {content}! It is HP-UX!'>>/home/{user}/.profile'".format(
                     server=curren_hp_server.rstrip(),
                     user=current_user,
-                    content="aaaaaaaaaa")
-                if counter_1==0 and counter_2==0:
-                    answer = input("Is construction correct?(y,n)\n" + command + "\n")
-                    question(answer)
-                proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+                    content=names[current_user])
+                print(command)
+                proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                 proc.wait(timeout=300)
             except:
-                exit()
-                print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
+                print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
 
 def run_custom_command():
     """Function for run custom programm"""
@@ -110,20 +137,21 @@ def run_custom_command():
             proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
             proc.wait(timeout=300)
         except:
-            print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
+            print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
 
 def menu_choose():
-    """Function for display meny vir variables"""
-    chose=input("Hello.\nPress 1 to create accounts \nPress 2 to create group \nPress 3 to edit '.profile'\nPress 4 to run custom command\n")
-    if chose=='1':
+    """Function for display menu for variables"""
+    choose=input("Hello.\nPress 1 to create accounts \nPress 2 to create group \nPress 3 to edit '.profile'\nPress 4 to run custom command\nPress 0 for exit\n")
+    if choose=='0':
+        exit()
+    if choose=='1':
         create_accounts()
-    elif chose=='2':
+    elif choose=='2':
         create_group()
-    elif chose=='3':
+    elif choose=='3':
         edit_profile()
-    elif chose=='4':
+    elif choose=='4':
         run_custom_command()
-
     else:
         print("Are you OK? Ehat are you doing? Try again.")
 
