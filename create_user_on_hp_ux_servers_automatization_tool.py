@@ -2,10 +2,14 @@
 #generate password --  openssl passwd -crypt
 import os
 import subprocess
-#import sys
-#import getopt
+import sys
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
+if sys.platform=="Linux":
+    ssh="ssh"
+elif sys.platform=="Windows":
+    ssh="putty.exe -pw mypassword  root@somewhere.com"
 
 def get_login_and_password():
     '''Function for return login and password hash as dictionary'''
@@ -96,7 +100,7 @@ def edit_profile():
         print("editing .profile of the user "+current_user)
         hp_server_list.seek(0)
         for counter_2, curren_hp_server in enumerate(hp_server_list):
-            print("On the server " + curren_hp_server)
+            print("On the server " + curren_hp_server.rstrip())
             profile_file.seek(0)
             for counter_3, current_line in enumerate(profile_file.readlines()):
                 try:
@@ -105,9 +109,8 @@ def edit_profile():
                         user=current_user,
                         content=current_line.rstrip())
                     if counter_1==0 and counter_2==0 and counter_3==0:
-                        answer = input("Is construction correct?(y,n)\n" + command + "\n")
+                        answer = input("Is construction correct?(y,n) WARNING! Check only first line!\n" + command + "\n")
                         question(answer)
-                    print(command)
                     proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                     proc.wait(timeout=300)
                 except:
@@ -117,7 +120,9 @@ def edit_profile():
                     server=curren_hp_server.rstrip(),
                     user=current_user,
                     content=names[current_user])
-                print(command)
+                if counter_2==0:
+                    answer = input("Is name and home folder correct?(y,n)\n" + command + "\n")
+                    question(answer)
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                 proc.wait(timeout=300)
             except:
@@ -153,7 +158,7 @@ def menu_choose():
     elif choose=='4':
         run_custom_command()
     else:
-        print("Are you OK? Ehat are you doing? Try again.")
+        print("Are you OK? What are you doing? Try again.")
 
 def start():
     """Main function"""
