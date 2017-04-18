@@ -8,6 +8,7 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 if sys.platform=="linux":
     ssh="ssh "
+    scp="scp "
 elif sys.platform=="win32":
     my_password=input("Please, enter the root password")
     ssh="\"C:\Program Files (x86)\PuTTY\plink.exe\" -pw " + my_password + " root@"
@@ -74,7 +75,7 @@ def create_accounts():
                 proc.wait(timeout=300)
             except:
                 exit()
-                print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
+                print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
 
 def create_group():
     """Function for create group"""
@@ -93,7 +94,7 @@ def create_group():
             proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
             proc.wait(timeout=300)
         except:
-            print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
+            print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
 
 def edit_profile():
     hp_users = get_login_and_password()
@@ -102,44 +103,64 @@ def edit_profile():
     for counter_1, current_user in enumerate(hp_users.keys()):
         print("editing .profile of the user "+current_user)
         hp_server_list.seek(0)
-        for counter_2, curren_hp_server in enumerate(hp_server_list):
-            print("On the server " + curren_hp_server.rstrip())
+        for counter_2, current_hp_server in enumerate(hp_server_list):
+            current_hp_server=current_hp_server.rstrip()
+            print("On the server " + current_hp_server)
             profile_file.seek(0)
-            for counter_3, current_line in enumerate(profile_file.readlines()):
-                try:
-                    command = '{ssh}{server} 'echo '{content}'>>/home/{user}/.profile''.format(
-                        ssh=ssh,
-                        server=curren_hp_server.rstrip(),
-                        user=current_user,
-                        content=current_line.rstrip())
-                    if counter_1==0 and counter_2==0 and counter_3==0:
-                        answer = input("Is construction correct?(y,n) WARNING! Check only first line!\n" + command + "\n")
-                        question(answer)
-                    print(command)
-                    proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
-                    proc.wait(timeout=300)
-                except:
-                    print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
+            command='{scp} ./profile.txt root@{server}:/tmp/profile.txt'.format(
+            scp=scp,
+            server=current_hp_server)
+            command_2 = '{ssh}{server} "cat /tmp/profile.txt>>/home/{user}/.profile"'.format(
+                ssh=ssh,
+                user=current_user,
+                server=current_hp_server)
             try:
-                command = '{ssh}{server} 'echo 'Hello, {content}! It is HP-UX!'>>/home/{user}/.profile''.format(
-                    ssh=ssh,
-                    server=curren_hp_server.rstrip(),
-                    user=current_user,
-                    content=names[current_user])
-                if counter_2==0:
-                    answer = input("Is name and home folder correct?(y,n)\n" + command + "\n")
-                    question(answer)
                 print(command)
+                print(command_2)
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                 proc.wait(timeout=300)
+                proc = subprocess.Popen(command_2, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+                proc.wait(timeout=300)
+                if counter_1==0 and counter_2==0:
+                    answer = input("Is construction correct?(y,n)\n" + command + "\n")
+                    question(answer)
             except:
-                print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
+                print("ALARM! Check the server" + current_hp_server.rstrip() + " immediately!")
+            with open("hello_user.txt", "w") as hello_file:
+                hello_file.write("echo Hello, {user}! It is HP-UX, not Linux. Be careful!\n".format(user=names[current_user]))
+            command = '{scp} ./hello_user.txt root@{server}:/tmp/hello_user.txt'.format(
+                scp=scp,
+                server=current_hp_server)
+            command_2 = '{ssh}{server} "cat /tmp/hello_user.txt>>/home/{user}/.profile"'.format(
+                ssh=ssh,
+                user=current_user,
+                server=current_hp_server)
+            try:
+                print(command)
+                print(command_2)
+                if  counter_2==0:
+                    file_names=open("hello_user.txt", "r").readline()
+                    answer = input("Is name and home folder correct?(y,n)\n" + file_names)
+                    question(answer)
+                command_3='{ssh}{server} rm -f /tmp/hello_user.txt /tmp/hello_user.txt'.format(
+                ssh=ssh,
+                server=current_hp_server)
+                proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+                proc.wait(timeout=300)
+                proc = subprocess.Popen(command_2, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+                proc.wait(timeout=300)
+                proc = subprocess.Popen(command_3, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+                proc.wait(timeout=300)
+                print(command_3)
+            except:
+                print("ALARM! Check the server " + current_hp_server.rstrip() + " immediately!")
+
 
 def run_custom_command():
     """Function for run custom programm"""
     command_i=input("Please, enter the command which will be run on servers:\n")
     for counter, curren_hp_server in enumerate(hp_server_list):
-        command='{ssh}{server} '{command_r}''.format(
+        command="{ssh}{server} '{command_r}'".format(
             ssh=ssh,
             server=curren_hp_server.rstrip(),
             command_r=command_i)
@@ -153,7 +174,7 @@ def run_custom_command():
             print(curren_hp_server.rstrip())
             print(proc.stdout.read())
         except:
-            print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
+            print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
 
 def menu_choose():
     """Function for display menu for variables"""
