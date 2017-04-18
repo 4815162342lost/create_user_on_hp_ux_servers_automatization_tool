@@ -6,10 +6,11 @@ import sys
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
-if sys.platform=="Linux":
-    ssh="ssh"
-elif sys.platform=="Windows":
-    ssh="putty.exe -pw mypassword  root@somewhere.com"
+if sys.platform=="linux":
+    ssh="ssh "
+elif sys.platform=="win32":
+    my_password=input("Please, enter the root password")
+    ssh="\"C:\Program Files (x86)\PuTTY\plink.exe\" -pw " + my_password + " root@"
 
 def get_login_and_password():
     '''Function for return login and password hash as dictionary'''
@@ -35,10 +36,10 @@ def question(answer):
         pass
     elif answer == 'n':
         print("Fix the error and try again...")
-        exit()
+        os._exit(1)
     else:
         print("Are you OK? Try again..")
-        exit()
+        os._exit(1)
 
 def create_accounts():
     """Function for create account"""
@@ -56,7 +57,8 @@ def create_accounts():
         for counter_2, curren_hp_server in enumerate(hp_server_list):
             try:
                 settings['comment']=settings['comment'].replace(' ', '_')
-                command = "ssh {server} 'useradd -g {group} -s {skel} -c {comment} -k /etc/skel -m -p {pass_hash} {user}'".format(
+                command = "{ssh}{server} 'useradd -g {group} -s {skel} -c {comment} -k /etc/skel -m -p {pass_hash} {user}'".format(
+                    ssh=ssh,
                     server=curren_hp_server.rstrip(),
                     group=settings['group'],
                     skel=settings['shell'],
@@ -78,7 +80,8 @@ def create_group():
     """Function for create group"""
     print("Creating group for  "+settings['group'])
     for counter, curren_hp_server in enumerate(hp_server_list):
-        command = "ssh {server} 'groupadd {group_name}'".format(
+        command = "{ssh}{server} 'groupadd {group_name}'".format(
+        ssh=ssh,
         group_name=settings['group'],
         server=curren_hp_server.rstrip())
         # check command in first iteration
@@ -104,25 +107,29 @@ def edit_profile():
             profile_file.seek(0)
             for counter_3, current_line in enumerate(profile_file.readlines()):
                 try:
-                    command = "ssh {server} 'echo '{content}'>>/home/{user}/.profile'".format(
+                    command = '{ssh}{server} 'echo '{content}'>>/home/{user}/.profile''.format(
+                        ssh=ssh,
                         server=curren_hp_server.rstrip(),
                         user=current_user,
                         content=current_line.rstrip())
                     if counter_1==0 and counter_2==0 and counter_3==0:
                         answer = input("Is construction correct?(y,n) WARNING! Check only first line!\n" + command + "\n")
                         question(answer)
+                    print(command)
                     proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                     proc.wait(timeout=300)
                 except:
                     print("ALARM! Check the server" + curren_hp_server.rstrip() + "immediately!")
             try:
-                command = "ssh {server} 'echo 'Hello, {content}! It is HP-UX!'>>/home/{user}/.profile'".format(
+                command = '{ssh}{server} 'echo 'Hello, {content}! It is HP-UX!'>>/home/{user}/.profile''.format(
+                    ssh=ssh,
                     server=curren_hp_server.rstrip(),
                     user=current_user,
                     content=names[current_user])
                 if counter_2==0:
                     answer = input("Is name and home folder correct?(y,n)\n" + command + "\n")
                     question(answer)
+                print(command)
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                 proc.wait(timeout=300)
             except:
@@ -130,17 +137,21 @@ def edit_profile():
 
 def run_custom_command():
     """Function for run custom programm"""
-    command=input("Please, enter the command which will be run on servers:\n")
+    command_i=input("Please, enter the command which will be run on servers:\n")
     for counter, curren_hp_server in enumerate(hp_server_list):
-        command="ssh {server} '{command}'".format(
+        command='{ssh}{server} '{command_r}''.format(
+            ssh=ssh,
             server=curren_hp_server.rstrip(),
-            command=command)
+            command_r=command_i)
         if counter==0:
             answer=input("Is construction correct?(y,n)\n"+ command + "\n")
             question(answer)
         try:
+            #print(command)
             proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
             proc.wait(timeout=300)
+            print(curren_hp_server.rstrip())
+            print(proc.stdout.read())
         except:
             print("ALARM! Check the server" + curren_hp_server.rstrip() + " immediately!")
 
