@@ -58,7 +58,7 @@ def create_accounts():
         for counter_2, curren_hp_server in enumerate(hp_server_list):
             try:
                 settings['comment']=settings['comment'].replace(' ', '_')
-                command = "{ssh}{server} 'useradd -g {group} -s {skel} -c {comment} -k /etc/skel -m -p {pass_hash} {user}'".format(
+                command = "{ssh}{server} 'useradd -g {group} -s {skel} -c {comment} -k /etc/skel -m -p '{pass_hash}' {user}'".format(
                     ssh=ssh,
                     server=curren_hp_server.rstrip(),
                     group=settings['group'],
@@ -115,8 +115,6 @@ def edit_profile():
                 user=current_user,
                 server=current_hp_server)
             try:
-                print(command)
-                print(command_2)
                 proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                 proc.wait(timeout=300)
                 proc = subprocess.Popen(command_2, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
@@ -127,7 +125,7 @@ def edit_profile():
             except:
                 print("ALARM! Check the server" + current_hp_server.rstrip() + " immediately!")
             with open("hello_user.txt", "w") as hello_file:
-                hello_file.write("echo Hello, {user}! It is HP-UX, not Linux. Be careful!\n".format(user=names[current_user]))
+                hello_file.write("echo Hello, {user}! It is HP-UX, not Linux.\n".format(user=names[current_user]))
             command = '{scp} ./hello_user.txt root@{server}:/tmp/hello_user.txt'.format(
                 scp=scp,
                 server=current_hp_server)
