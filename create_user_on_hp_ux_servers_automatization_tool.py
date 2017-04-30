@@ -12,6 +12,7 @@ if sys.platform=="linux":
 elif sys.platform=="win32":
     my_password=input("Please, enter the root password\n")
     ssh="\"C:\Program Files (x86)\PuTTY\plink.exe\" -pw " + my_password + " root@"
+    scp = "\"C:\Program Files (x86)\PuTTY\pscp.exe\"" + " -pw " + my_password + " "
 
 def get_login_and_password():
     '''Function for return login and password hash as dictionary'''
@@ -39,6 +40,12 @@ def check_logins_and_names(login_from_hp_user_name, login_from_names):
     if  len(difference_set) !=0:
         print("Files name.txt and hp_user_name.txt is not same! Fix it.")
         exit()
+def check_login_length(hp_users):
+    '''check len of the login (HP UX soes not support login longer 8 symbol)'''
+    for current_user in hp_users.keys():
+        if len(current_user) > 8:
+            print("The login " + current_user + " is too long. The maximum length is 8 symbols. Fix it!")
+            os._exit(1)
 
 def question(answer):
     '''Function for processing answer (y\n) before continue'''
@@ -50,69 +57,6 @@ def question(answer):
     else:
         print("Are you OK? Try again..")
         os._exit(1)
-
-def create_accounts(hp_ux_version):
-    """Function for create account"""
-    #check len of the login (HP UX soes not support login longer 8 symbol)
-    hp_users = get_login_and_password()
-    for current_user in hp_users.keys():
-        if len(current_user) > 8:
-            print("The login " + current_user + " is too long. The maximum length is 8 symbols. Fix it!")
-            exit()
-    #loop for read usernames
-    for counter_1, current_user in enumerate(hp_users.keys()):
-        print("Creating the account for the user "+current_user)
-        hp_server_list.seek(0)
-        #loop for read server name
-        for counter_2, curren_hp_server in enumerate(hp_server_list):
-            try:
-                settings['comment']=settings['comment'].replace(' ', '_')
-                if hp_ux_version=="new":
-                    command = "{ssh}{server} 'useradd -g {group} -s {shell} -c {comment} -k /etc/skel -m -p '{pass_hash}' {user}'".format(
-                        ssh=ssh,
-                        server=curren_hp_server.rstrip(),
-                        group=settings['group'],
-                        shell=settings['shell'],
-                        comment=settings['comment'],
-                        pass_hash=hp_users[current_user],
-                        user=current_user)
-                elif hp_ux_version=="old":
-                    command = "{ssh}{server} 'useradd -g {group} -s {shell} -c {comment} -k /etc/skel -m {user}'".format(
-                        ssh=ssh,
-                        server=curren_hp_server.rstrip(),
-                        group=settings['group'],
-                        shell=settings['shell'],
-                        comment=settings['comment'],
-                        user=current_user)
-                #check command in first iteration
-                if counter_1==0 and counter_2==0:
-                    answer = input("Is construction correct?(y,n)\n" + command + "\n")
-                    question(answer)
-                print("Server:", curren_hp_server.rstrip())
-                proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
-                proc.wait(timeout=300)
-            except:
-                exit()
-                print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
-
-def create_group():
-    """Function for create group"""
-    print("Creating group for  "+settings['group'])
-    for counter, curren_hp_server in enumerate(hp_server_list):
-        command = "{ssh}{server} 'groupadd {group_name}'".format(
-        ssh=ssh,
-        group_name=settings['group'],
-        server=curren_hp_server.rstrip())
-        # check command in first iteration
-        if counter==0:
-            answer=input("Is construction correct?(y,n)\n"+ command + "\n")
-            question(answer)
-        try:
-            print("Server:", curren_hp_server.rstrip())
-            proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
-            proc.wait(timeout=300)
-        except:
-            print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
 
 def edit_profile():
     '''Function for modify .profile'''
@@ -173,69 +117,84 @@ def edit_profile():
                 except:
                     print("ALARM! Check the server " + current_hp_server.rstrip() + " immediately!")
 
-def run_custom_command():
+def loop_with_servers_list(action, params):
     """Function for run custom programm"""
-    command_i=input("Please, enter the command which will be run on servers:\n")
-    for counter, curren_hp_server in enumerate(hp_server_list):
-        command="{ssh}{server} '{command_r}'".format(
+    if action=="custom_commad":
+        command = input("Please, enter the command which will be run on servers:\n")
+    elif action=="add_group":
+        command = "groupadd {group_name}".format(
             ssh=ssh,
-            server=curren_hp_server.rstrip(),
-            command_r=command_i)
-        if counter==0:
-            answer=input("Is construction correct?(y,n)\n"+ command + "\n")
-            question(answer)
-        try:
-            print(curren_hp_server.rstrip())
-            proc = subprocess.Popen(command, shell=True, universal_newlines=True)
-            proc.wait(timeout=300)
-        except:
-            print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
-
-def copy_file():
-    """Function for copy file via scp"""
-    source=input("Please, enter the file which should be copy to the server\n")
-    destination=input("Please, enter the destination of the file (full path)\n")
+            group_name=settings['group'])
+    elif action=="scp_copy_file":
+        source = input("Please, enter the file which should be copy to the server\n")
+        destination = input("Please, enter the destination of the file (full path)\n")
     for counter, curren_hp_server in enumerate(hp_server_list):
-        command="{scp}'{source} root@{server}:{destination}'".format(
-            scp=scp,
-            source=source,
-            server=curren_hp_server.rstrip(),
-            destination=destination)
+        if action=="scp_copy_file":
+            command_r = "{protocol} {source} root@{server}:{destination}".format(
+                protocol=scp,
+                source=source,
+                server=curren_hp_server.rstrip(),
+                destination=destination)
+        else:
+            command_r="{protocol}{server} '{command}'".format(
+                protocol=ssh,
+                server=curren_hp_server.rstrip(),
+                command=command)
         if counter==0:
-            answer=input("Is construction correct?(y,n)\n"+ command + "\n")
+            answer=input("Is construction correct?(y,n)\n"+ command_r + "\n")
             question(answer)
         try:
-            print(curren_hp_server.rstrip())
-            proc = subprocess.Popen(command, shell=True, universal_newlines=True)
+            print(curren_hp_server.rstrip()+":")
+            proc = subprocess.Popen(command_r, shell=True, universal_newlines=True)
             proc.wait(timeout=300)
         except:
             print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
 
-def change_password():
-    """Function for change passwords"""
+def loop_with_servers_list_and_logins(action, hp_ux_version, params):
+    """Function for create account"""
     hp_users = get_login_and_password()
-    for current_user in hp_users.keys():
-        if len(current_user) > 8:
-            print("The login " + current_user + " is too long. The maximum length is 8 symbols. Fix it!")
-            exit()
+    check_login_length(hp_users)
     #loop for read usernames
     for counter_1, current_user in enumerate(hp_users.keys()):
-        print("Changint the password of the user "+current_user)
+        if action=="create_account":
+            print("Creating the account for the user " + current_user)
+        if action=="change_password":
+            print("Changing the password of the user " + current_user)
         hp_server_list.seek(0)
         #loop for read server name
         for counter_2, curren_hp_server in enumerate(hp_server_list):
             try:
-                settings['comment']=settings['comment'].replace(' ', '_')
-                command = "{ssh}{server} '/usr/sam/lbin/usermod.sam -p '{pass_hash}' {user}'".format(
-                    ssh=ssh,
-                    server=curren_hp_server.rstrip(),
-                    pass_hash=hp_users[current_user],
-                    user=current_user)
+                if action == "create_account":
+                    settings['comment']=settings['comment'].replace(' ', '_')
+                    if hp_ux_version=="new":
+                        command = "{ssh}{server} 'useradd -g {group} -s {shell} -c {comment} -k /etc/skel -m -p '{pass_hash}' {user}'".format(
+                            ssh=ssh,
+                            server=curren_hp_server.rstrip(),
+                            group=settings['group'],
+                            shell=settings['shell'],
+                            comment=settings['comment'],
+                            pass_hash=hp_users[current_user],
+                            user=current_user)
+                    elif hp_ux_version=="old":
+                        command = "{ssh}{server} 'useradd -g {group} -s {shell} -c {comment} -k /etc/skel -m {user}'".format(
+                            ssh=ssh,
+                            server=curren_hp_server.rstrip(),
+                            group=settings['group'],
+                            shell=settings['shell'],
+                            comment=settings['comment'],
+                            user=current_user)
+                elif action == "change_password":
+                    command = "{ssh}{server} '/usr/sam/lbin/usermod.sam -p '{pass_hash}' {user}'".format(
+                        ssh=ssh,
+                        server=curren_hp_server.rstrip(),
+                        pass_hash=hp_users[current_user],
+                        user=current_user)
                 #check command in first iteration
                 if counter_1==0 and counter_2==0:
                     answer = input("Is construction correct?(y,n)\n" + command + "\n")
                     question(answer)
                 print("Server:", curren_hp_server.rstrip())
+                print(command)
                 proc=subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, universal_newlines=True)
                 proc.wait(timeout=300)
             except:
@@ -249,19 +208,19 @@ def menu_choose():
     if choose=='0':
         exit()
     elif choose=='1':
-        create_accounts("new")
+        loop_with_servers_list_and_logins("create_account", "new", None)
     elif choose=='2':
-        create_accounts("old")
+        loop_with_servers_list_and_logins("create_account", "old", None)
     elif choose=='3':
-        create_group()
+        loop_with_servers_list("add_group", None)
     elif choose=='4':
         edit_profile()
     elif choose=='5':
-        change_password()
+        loop_with_servers_list_and_logins("change_password", None, None)
     elif choose=='6':
-        copy_file()
+        loop_with_servers_list("scp_copy_file", None)
     elif choose=='7':
-        run_custom_command()
+        loop_with_servers_list("custom_commad", None)
     else:
         print("Are you OK? What are you doing? Try again.")
 
