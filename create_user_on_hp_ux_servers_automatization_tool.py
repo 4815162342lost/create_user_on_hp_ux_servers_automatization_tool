@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import argparse
 
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -27,7 +28,7 @@ def get_settings():
     return settings
 
 def get_names_of_tje_login():
-    '''Function for return login and password hash as dictionary'''
+    '''Function for return login and real name as dictionary'''
     names={}
     exec(open('names.txt', 'r').read(), None, names)
     return names
@@ -118,9 +119,12 @@ def edit_profile():
                     print("ALARM! Check the server " + current_hp_server.rstrip() + " immediately!")
 
 def loop_with_servers_list(action, params):
-    """Function for run custom programm"""
+    """Function for run command in server_list loop"""
     if action=="custom_commad":
-        command = input("Please, enter the command which will be run on servers:\n")
+        if params==None:
+            command = input("Please, enter the command which will be run on servers:\n")
+        else:
+            command=params
     elif action=="add_group":
         command = "groupadd {group_name}".format(
             ssh=ssh,
@@ -128,6 +132,7 @@ def loop_with_servers_list(action, params):
     elif action=="scp_copy_file":
         source = input("Please, enter the file which should be copy to the server\n")
         destination = input("Please, enter the destination of the file (full path)\n")
+    #loop with server list
     for counter, curren_hp_server in enumerate(hp_server_list):
         if action=="scp_copy_file":
             command_r = "{protocol} {source} root@{server}:{destination}".format(
@@ -151,7 +156,7 @@ def loop_with_servers_list(action, params):
             print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
 
 def loop_with_servers_list_and_logins(action, hp_ux_version, params):
-    """Function for create account"""
+    '''Function for run the command in server and username loop'''
     hp_users = get_login_and_password()
     check_login_length(hp_users)
     #loop for read usernames
@@ -166,6 +171,7 @@ def loop_with_servers_list_and_logins(action, hp_ux_version, params):
             try:
                 if action == "create_account":
                     settings['comment']=settings['comment'].replace(' ', '_')
+                    #if HP-UX 11.31 account will be create with password
                     if hp_ux_version=="new":
                         command = "{ssh}{server} 'useradd -g {group} -s {shell} -c {comment} -k /etc/skel -m -p '{pass_hash}' {user}'".format(
                             ssh=ssh,
@@ -175,6 +181,7 @@ def loop_with_servers_list_and_logins(action, hp_ux_version, params):
                             comment=settings['comment'],
                             pass_hash=hp_users[current_user],
                             user=current_user)
+                    #if HP-UX 11.23 account will be create without password
                     elif hp_ux_version=="old":
                         command = "{ssh}{server} 'useradd -g {group} -s {shell} -c {comment} -k /etc/skel -m {user}'".format(
                             ssh=ssh,
@@ -202,7 +209,7 @@ def loop_with_servers_list_and_logins(action, hp_ux_version, params):
                 print("ALARM! Check the server " + curren_hp_server.rstrip() + " immediately!")
 
 def menu_choose():
-    """Function for display menu for variables"""
+    '''Function for display menu for variables'''
     choose=input("Hello.\nPress 1 to create accounts with password (HP-UX 11.31+)\nPress 2 to create accounts without password (HP-UX 11.23+)  \nPress 3 to create group \nPress 4 to edit '.profile'"
                  "\nPress 5 for change the password of the users\nPress 6 for copy file to remote server \nPress 7 to run custom command \nPress 0 for exit\n")
     if choose=='0':
@@ -225,9 +232,19 @@ def menu_choose():
         print("Are you OK? What are you doing? Try again.")
 
 def start():
-    """Main function"""
+    '''Main function'''
     menu_choose()
 
-settings=get_settings()
-hp_server_list=open('hp_server_list.txt', 'r')
+settings = get_settings()
+parser = argparse.ArgumentParser()
+parser.add_argument('-L', '--server_list', type=str, required=False, help='enter the server list')
+parser.add_argument('-c', '--run_command', type=str, required=False, help='enter the command wich will be run on the servers')
+args = parser.parse_args()
+if args.server_list==None:
+    hp_server_list = open('hp_server_list.txt', 'r')
+else:
+    hp_server_list = args.server_list.split(',')
+if args.run_command != None:
+    loop_with_servers_list("custom_commad", args.run_command)
+
 start()
