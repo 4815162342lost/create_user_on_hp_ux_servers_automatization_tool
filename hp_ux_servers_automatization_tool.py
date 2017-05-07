@@ -48,6 +48,16 @@ def check_login_length(hp_users):
             print("The login " + current_user + " is too long. The maximum length is 8 symbols. Fix it!")
             os._exit(1)
 
+def generate_hash():
+    '''Function for generate the hash of the passwords'''
+    while True:
+        password=input("enter the password. If you want to exit, enter exit\n")
+        if password=='exit':
+            break
+        else:
+            proc=subprocess.Popen("echo {password} | openssl passwd -crypt -stdin".format(password=password), shell=True, stdout=subprocess.PIPE, universal_newlines=True)
+            print(proc.stdout.read().rstrip())
+
 def question(answer):
     '''Function for processing answer (y\n) before continue'''
     if answer == 'y':
@@ -211,7 +221,7 @@ def loop_with_servers_list_and_logins(action, hp_ux_version, params):
 def menu_choose():
     '''Function for display menu for variables'''
     choose=input("Hello.\nPress 1 to create accounts with password (HP-UX 11.31+)\nPress 2 to create accounts without password (HP-UX 11.23+)  \nPress 3 to create group \nPress 4 to edit '.profile'"
-                 "\nPress 5 for change the password of the users\nPress 6 for copy file to remote server \nPress 7 to run custom command \nPress 0 for exit\n")
+                 "\nPress 5 for change the password of the users\nPress 6 for copy file to remote server \nPress 7 to run custom command \nPress 8 for generate the password\nPress 0 for exit\n")
     if choose=='0':
         exit()
     elif choose=='1':
@@ -228,6 +238,8 @@ def menu_choose():
         loop_with_servers_list("scp_copy_file", None)
     elif choose=='7':
         loop_with_servers_list("custom_commad", None)
+    elif choose=="8":
+        generate_hash()
     else:
         print("Are you OK? What are you doing? Try again.")
 
