@@ -79,11 +79,17 @@ def edit_profile():
     profile_file=open("profile.txt", 'r')
     for counter_1, current_user in enumerate(hp_users.keys()):
         print("editing .profile of the user "+current_user)
-        hp_server_list.seek(0)
+        try:
+            hp_server_list.seek(0)
+        except AttributeError:
+            pass
         for counter_2, current_hp_server in enumerate(hp_server_list):
             current_hp_server=current_hp_server.rstrip()
             print("On the server " + current_hp_server)
-            profile_file.seek(0)
+            try:
+                profile_file.seek(0)
+            except AttributeError:
+                pass
             #copy our .profile to the server and modify .profile on the server
             command='{scp} ./profile.txt root@{server}:/tmp/profile.txt'.format(
             scp=scp,
@@ -175,7 +181,10 @@ def loop_with_servers_list_and_logins(action, hp_ux_version, params):
             print("Creating the account for the user " + current_user)
         if action=="change_password":
             print("Changing the password of the user " + current_user)
-        hp_server_list.seek(0)
+        try:
+            hp_server_list.seek(0)
+        except AttributeError:
+            pass
         #loop for read server name
         for counter_2, curren_hp_server in enumerate(hp_server_list):
             try:
@@ -245,7 +254,10 @@ def menu_choose():
 
 def start():
     '''Main function'''
-    menu_choose()
+    if args.run_command != None:
+        loop_with_servers_list("custom_commad", args.run_command)
+    else:
+        menu_choose()
 
 settings = get_settings()
 parser = argparse.ArgumentParser()
@@ -256,7 +268,5 @@ if args.server_list==None:
     hp_server_list = open('hp_server_list.txt', 'r')
 else:
     hp_server_list = args.server_list.split(',')
-if args.run_command != None:
-    loop_with_servers_list("custom_commad", args.run_command)
 
 start()
